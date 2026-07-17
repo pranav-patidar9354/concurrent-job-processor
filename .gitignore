@@ -1,0 +1,15 @@
+.env
+.env.docker
+
+*.exe
+*.test
+*.out
+
+bin/
+tmp/
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
