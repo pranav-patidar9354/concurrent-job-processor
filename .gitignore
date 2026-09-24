@@ -1,5 +1,4 @@
 .env
-.env.docker
 
 *.exe
 *.test
@@ -13,3 +12,5 @@ tmp/
 
 .DS_Store
 Thumbs.db
+.vercel
+.cph

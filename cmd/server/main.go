@@ -13,6 +13,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/pranav-patidar9354/concurrent-job-processor/config"
+	"github.com/pranav-patidar9354/concurrent-job-processor/internal/docs"
 	"github.com/pranav-patidar9354/concurrent-job-processor/internal/routes"
 	"github.com/pranav-patidar9354/concurrent-job-processor/internal/worker"
 )
@@ -35,6 +36,9 @@ func main() {
 	// Create Gin router
 	router := gin.Default()
 
+	// Swagger Documentation (FastAPI style /docs)
+	docs.RegisterDocsRoutes(router)
+
 	// Health check
 	router.GET("/", func(c *gin.Context) {
 
@@ -49,9 +53,11 @@ func main() {
 
 	routes.JobRoutes(api)
 
-	// Get server port
-	port := os.Getenv("SERVER_PORT")
-
+	// Get server port (PORT for Render/Cloud, SERVER_PORT for local)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = os.Getenv("SERVER_PORT")
+	}
 	if port == "" {
 		port = "8081"
 	}

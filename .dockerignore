@@ -1,9 +1,0 @@
-.git
-.gitignore
-.env
-.vscode
-.idea
-README.md
-*.exe
-tmp
-bin

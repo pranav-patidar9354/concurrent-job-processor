@@ -2,7 +2,7 @@
 
 A concurrent background job processing system built with **Go**, designed to demonstrate practical usage of Go's concurrency primitives including **goroutines, channels, worker pools, mutexes, contexts, and WaitGroups**.
 
-The system allows clients to submit background jobs through REST APIs. Jobs are placed into a buffered channel and processed concurrently by a fixed-size pool of worker goroutines. Job states are persisted in MySQL and can be tracked, cancelled, or queried through the API.
+The system allows clients to submit background jobs through REST APIs. Jobs are placed into a buffered channel and processed concurrently by a fixed-size pool of worker goroutines. Job states are persisted in PostgreSQL (e.g. Neon DB) and can be tracked, cancelled, or queried through the API.
 
 ---
 
@@ -13,15 +13,13 @@ The system allows clients to submit background jobs through REST APIs. Jobs are 
 - Concurrent processing using Goroutines
 - Buffered Channels for job queuing
 - Fixed-size Worker Pool architecture
-- MySQL database persistence using GORM
+- PostgreSQL database persistence using GORM (supports Neon DB)
 - Job status tracking
 - Job failure handling
 - Job cancellation using Go Context
 - Job processing timeouts
 - Thread-safe context management using Mutex
 - Graceful shutdown using WaitGroup
-- Dockerized backend and MySQL database
-- Docker Compose for multi-container setup
 - Layered backend architecture
 
 ---
@@ -38,7 +36,7 @@ Gin REST API
    ▼
 Service Layer
    │
-   ├──────────────► MySQL Database
+   ├──────────────► PostgreSQL Database
    │                 status = queued
    │
    ▼
@@ -55,7 +53,7 @@ Process Job  Process Job  Process Job
    └────────────┴────────────┘
                 │
                 ▼
-          MySQL Database
+          PostgreSQL Database
                 │
        ┌────────┼────────┐
        ▼        ▼        ▼
@@ -155,14 +153,12 @@ Unsupported job types are automatically marked as `failed`.
 | Go | Backend programming language |
 | Gin | HTTP web framework |
 | GORM | ORM for database operations |
-| MySQL | Persistent job storage |
+| PostgreSQL / Neon | Persistent job storage |
 | Goroutines | Concurrent worker execution |
 | Channels | In-memory job queue |
 | Context | Cancellation and timeout handling |
 | Mutex | Thread-safe shared state |
 | WaitGroup | Worker synchronization |
-| Docker | Application containerization |
-| Docker Compose | Multi-container orchestration |
 
 ---
 
@@ -171,10 +167,22 @@ Unsupported job types are automatically marked as `failed`.
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/` | Health check |
+| GET | `/docs` | Interactive Swagger UI (FastAPI-style) |
+| GET | `/openapi.json` | OpenAPI 3.0 specification |
 | POST | `/api/v1/jobs` | Submit a new background job |
 | GET | `/api/v1/jobs` | Get all jobs |
 | GET | `/api/v1/jobs/:id` | Get a job by ID |
 | DELETE | `/api/v1/jobs/:id` | Cancel a job |
+
+---
+
+## Interactive API Documentation (Swagger UI)
+
+The API includes an interactive **Swagger UI** interface (identical to FastAPI's `/docs`), allowing you to test endpoints, trigger jobs, and view schemas directly from your browser.
+
+- **Live API Docs (Vercel):** [https://concurrent-job-processor.vercel.app](https://concurrent-job-processor.vercel.app)
+- **Local Swagger UI:** `http://localhost:8081/docs` (or `http://localhost:8081/swagger`)
+- **OpenAPI 3.0 Spec:** `http://localhost:8081/openapi.json`
 
 ---
 
@@ -316,13 +324,15 @@ concurrent-job-processor/
 │   └── response/
 │       └── response.go
 │
-├── .dockerignore
+├── public/
+│   ├── index.html
+│   └── openapi.json
+│
 ├── .env.example
 ├── .gitignore
-├── Dockerfile
-├── docker-compose.yml
 ├── go.mod
 ├── go.sum
+├── vercel.json
 └── README.md
 ```
 
@@ -335,26 +345,25 @@ concurrent-job-processor/
 Make sure you have installed:
 
 - Go
-- MySQL
+- PostgreSQL (or a free cloud database like [Neon DB](https://neon.tech))
 
-Create the database:
+Configure your `.env` file based on `.env.example`:
 
-```sql
-CREATE DATABASE job_processor;
-```
-
-Create a `.env` file based on `.env.example` and configure your database credentials.
-
-Example:
-
+**Using Neon DB (Recommended):**
 ```env
 SERVER_PORT=8081
+DATABASE_URL=postgresql://username:password@ep-sample-123456.us-east-2.aws.neon.tech/neondb?sslmode=require
+```
 
+**Or using local PostgreSQL:**
+```env
+SERVER_PORT=8081
 DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
+DB_PORT=5432
+DB_USER=postgres
 DB_PASSWORD=your_password
 DB_NAME=job_processor
+DB_SSLMODE=disable
 ```
 
 Run the application:
@@ -371,43 +380,18 @@ http://localhost:8081
 
 ---
 
-## Running with Docker
-
-The application can also be run using Docker Compose.
-
-Docker Compose starts:
-
-- Go backend container
-- MySQL database container
-
-Build and start the containers:
-
-```bash
-docker compose up --build
-```
-
-The API will be available on port `8081`.
-
-Stop the containers:
-
-```bash
-docker compose down
-```
-
-MySQL data is persisted using a Docker volume.
-
----
-
 ## Environment Variables
 
 | Variable | Description |
 |---|---|
-| `SERVER_PORT` | Port used by the HTTP server |
-| `DB_HOST` | MySQL database host |
-| `DB_PORT` | MySQL database port |
-| `DB_USER` | MySQL username |
-| `DB_PASSWORD` | MySQL password |
-| `DB_NAME` | MySQL database name |
+| `SERVER_PORT` | Port used by the HTTP server (default: `8081`) |
+| `DATABASE_URL` | Full PostgreSQL / Neon connection string (prioritized) |
+| `DB_HOST` | PostgreSQL host (fallback if `DATABASE_URL` not set) |
+| `DB_PORT` | PostgreSQL port (default: `5432`) |
+| `DB_USER` | PostgreSQL username |
+| `DB_PASSWORD` | PostgreSQL password |
+| `DB_NAME` | PostgreSQL database name |
+| `DB_SSLMODE` | SSL mode (`require` for Neon, `disable` for local) |
 
 Use `.env.example` as a reference.
 
@@ -444,4 +428,4 @@ This project demonstrates how Go can be used to build concurrent backend systems
 - WaitGroups for coordinating goroutines
 - Graceful shutdown for safe application termination
 
-It also demonstrates REST API development, layered backend architecture, MySQL persistence, and Docker-based deployment.
+It also demonstrates REST API development, layered backend architecture, and PostgreSQL persistence.

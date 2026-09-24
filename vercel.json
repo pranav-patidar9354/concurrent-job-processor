@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/openapi.json",
+      "dest": "/public/openapi.json"
+    },
+    {
+      "src": "/docs",
+      "dest": "/public/index.html"
+    },
+    {
+      "src": "/swagger",
+      "dest": "/public/index.html"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
+    }
+  ]
+}

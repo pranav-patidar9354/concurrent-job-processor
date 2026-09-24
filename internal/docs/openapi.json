@@ -1,0 +1,367 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Concurrent Job Processor API",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "API health check"
+    },
+    {
+      "name": "Jobs",
+      "description": "Background job management and tracking"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Verify whether the API server is up and running.",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "Concurrent Job Processor API is running"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs": {
+      "post": {
+        "tags": ["Jobs"],
+        "summary": "Submit a new background job",
+        "description": "Creates a job with `queued` status and enqueues it to the worker pool for background execution.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJobRequest"
+              },
+              "examples": {
+                "generate_report": {
+                  "summary": "Generate Report (6s)",
+                  "value": {
+                    "type": "generate_report",
+                    "payload": "Q1 2026 Financial Report"
+                  }
+                },
+                "send_email": {
+                  "summary": "Send Email (3s)",
+                  "value": {
+                    "type": "send_email",
+                    "payload": "Welcome email to user #104"
+                  }
+                },
+                "process_data": {
+                  "summary": "Process Data (8s)",
+                  "value": {
+                    "type": "process_data",
+                    "payload": "Dataset import batch #42"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Job submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - type and payload are required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Jobs"],
+        "summary": "Get all jobs",
+        "description": "Retrieve a list of all submitted jobs and their current execution statuses.",
+        "responses": {
+          "200": {
+            "description": "List of jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListSuccessResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{id}": {
+      "get": {
+        "tags": ["Jobs"],
+        "summary": "Get a job by ID",
+        "description": "Retrieve status, payload, execution result, or error message for a specific job.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job details fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid job ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Jobs"],
+        "summary": "Cancel a job",
+        "description": "Cancels a running job via Context cancellation or marks a queued job as cancelled.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to cancel",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job cancellation requested successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "Job cancellation requested successfully",
+                  "data": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Job cannot be cancelled (e.g., already completed or failed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateJobRequest": {
+        "type": "object",
+        "required": ["type", "payload"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["generate_report", "send_email", "process_data"],
+            "description": "Type of job to process",
+            "example": "generate_report"
+          },
+          "payload": {
+            "type": "string",
+            "description": "Payload data or instructions for the job",
+            "example": "Generate Q1 Financial Report"
+          }
+        }
+      },
+      "Job": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "type": {
+            "type": "string",
+            "example": "generate_report"
+          },
+          "payload": {
+            "type": "string",
+            "example": "Generate Q1 Financial Report"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "processing", "completed", "failed", "cancelled"],
+            "example": "completed"
+          },
+          "result": {
+            "type": "string",
+            "example": "Report generated successfully: Generate Q1 Financial Report"
+          },
+          "error_message": {
+            "type": "string",
+            "example": ""
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "JobSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Job submitted successfully"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Job"
+          }
+        }
+      },
+      "JobListSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Jobs fetched successfully"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Job"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "string",
+            "example": "Job not found"
+          }
+        }
+      }
+    }
+  }
+}

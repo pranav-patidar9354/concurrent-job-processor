@@ -7,7 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/pranav-patidar9354/concurrent-job-processor/internal/models"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -18,18 +18,49 @@ func ConnectDatabase() {
 	// Load environment variables
 	_ = godotenv.Load()
 
-	// Create MySQL DSN
-	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
+	// Prioritize DATABASE_URL (for Neon / Cloud PostgreSQL)
+	dsn := os.Getenv("DATABASE_URL")
 
-	// Connect GORM to MySQL
-	database, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if dsn == "" {
+		host := os.Getenv("DB_HOST")
+		if host == "" {
+			host = "localhost"
+		}
+
+		port := os.Getenv("DB_PORT")
+		if port == "" {
+			port = "5432"
+		}
+
+		user := os.Getenv("DB_USER")
+		if user == "" {
+			user = "postgres"
+		}
+
+		password := os.Getenv("DB_PASSWORD")
+		dbname := os.Getenv("DB_NAME")
+		if dbname == "" {
+			dbname = "job_processor"
+		}
+
+		sslmode := os.Getenv("DB_SSLMODE")
+		if sslmode == "" {
+			sslmode = "disable"
+		}
+
+		dsn = fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+			host,
+			port,
+			user,
+			password,
+			dbname,
+			sslmode,
+		)
+	}
+
+	// Connect GORM to PostgreSQL
+	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 	if err != nil {
 		log.Fatal("Failed to connect to database: ", err)
@@ -37,7 +68,7 @@ func ConnectDatabase() {
 
 	DB = database
 
-	fmt.Println("Database connected successfully!")
+	fmt.Println("PostgreSQL database connected successfully!")
 
 	// Automatically create/update database tables
 	err = DB.AutoMigrate(
